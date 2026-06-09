@@ -298,19 +298,12 @@ class ReviewPDF(FPDF):
                 if cn:
                     if jp:
                         self.ln(1)
-                    # Scheme B: bg + left border for translation
-                    y0 = self.get_y()
+                    # Light blue bg for translation (no left bar)
                     self.set_fill_color(0xf0, 0xf4, 0xfa)
-                    self.set_draw_color(0x28, 0x3c, 0x5a)
-                    self.set_line_width(0.6)
                     self._set_font("", FS_BODY)
                     self._set_color(C_TRANSLATION)
-                    self.set_x(self.l_margin + 7)
-                    self.multi_cell(self._w() - 7, LH_BODY, cn, align="L", fill=True)
-                    y1 = self.get_y()
-                    # Left border bar (2mm wide, ~2mm gap to bg)
-                    self.set_fill_color(0x28, 0x3c, 0x5a)
-                    self.rect(self.l_margin, y0, 2, y1 - y0, "F")
+                    self.set_x(self.l_margin)
+                    self.multi_cell(self._w(), LH_BODY, cn, align="L", fill=True)
                     self.ln(2)
 
                 if jp or cn:
