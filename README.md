@@ -33,7 +33,7 @@ japanese-exam-review-skill/
 ```bash
 # 在你的项目根目录下
 mkdir -p .claude/skills
-git clone https://github.com/oo0816/japanese-exam-review-skill.git .claude/skills/japanese-exam-review
+git clone https://github.com/oo0816/-japanese-exam-review-skill.git .claude/skills/japanese-exam-review
 ```
 
 ### 2. 安装 Python 依赖
