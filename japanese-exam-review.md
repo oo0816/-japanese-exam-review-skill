@@ -1,3 +1,8 @@
+---
+name: japanese-exam-review
+description: 为软件工程中日合办学生，根据日语CS课件和试卷生成复习文档PDF
+---
+
 # 日语考试复习文档生成器
 
 ## 概述
