@@ -13,7 +13,6 @@ from fpdf import FPDF
 STYLES = {
     "jp_first": {
         "C_TITLE":       (0x1a, 0x3a, 0x5c),
-        "C_SUBTITLE":    (0xc8, 0x32, 0x32),
         "C_SECTION":     (0x28, 0x3c, 0x5a),
         "C_BODY":        (0x22, 0x22, 0x22),
         "C_KEYPOINT":    (0x28, 0x32, 0x46),
@@ -36,7 +35,7 @@ STYLES = {
         "C_TRANS_BG":    (0xed, 0xf2, 0xf8),
         "FS_TITLE":      24.0, "FS_TITLE_SUB": 20.0, "FS_TITLE_EN": 14.0,
         "FS_TITLE_INFO": 13.0, "FS_TITLE_DESC": 10.0,
-        "FS_CHAPTER":    17.0, "FS_CHAPTER_SUB": 10.0, "FS_SECTION": 12.0,
+        "FS_CHAPTER":    17.0, "FS_SECTION": 12.0,
         "FS_BODY":       8.5, "FS_KEYPOINT": 8.5, "FS_EXAM": 8.5,
         "FS_CAPTION":    8.0, "FS_NOTE": 7.0,
         "FS_TABLE_HDR":  7.5, "FS_TABLE_BODY": 7.0, "FS_PAGENUM": 7.0,
@@ -48,7 +47,6 @@ STYLES = {
     },
     "chinese_annotated": {
         "C_TITLE":       (0x1a, 0x3a, 0x5c),
-        "C_SUBTITLE":    (0xc8, 0x32, 0x32),
         "C_SECTION":     (0x28, 0x3c, 0x5a),
         "C_BODY":        (0x32, 0x32, 0x32),  # SE guide original body color
         "C_KEYPOINT":    (0x28, 0x32, 0x46),
@@ -71,7 +69,7 @@ STYLES = {
         "C_TRANS_BG":    (0xf0, 0xf4, 0xfa),
         "FS_TITLE":      24.0, "FS_TITLE_SUB": 20.0, "FS_TITLE_EN": 14.0,
         "FS_TITLE_INFO": 13.0, "FS_TITLE_DESC": 10.0,
-        "FS_CHAPTER":    17.0, "FS_CHAPTER_SUB": 10.0, "FS_SECTION": 12.0,
+        "FS_CHAPTER":    17.0, "FS_SECTION": 12.0,
         "FS_BODY":       8.5, "FS_KEYPOINT": 8.5, "FS_EXAM": 8.5,
         "FS_CAPTION":    8.0, "FS_NOTE": 7.0,
         "FS_TABLE_HDR":  7.5, "FS_TABLE_BODY": 7.0, "FS_PAGENUM": 7.0,
@@ -300,14 +298,6 @@ class ReviewPDF(FPDF):
         self.set_draw_color(*border_color)
         self.line(self.l_margin, self.get_y(), self.l_margin + sum(col_widths), self.get_y())
         self.ln(3)
-
-    def _draw_divider(self):
-        """Light horizontal separator line."""
-        self.ln(2)
-        self.set_draw_color(200, 200, 210)
-        y = self.get_y()
-        self.line(self.l_margin, y, self.w - self.r_margin, y)
-        self.ln(2)
 
     def render_concept_card(self, block):
         """Render concept card: JP/CN interleaved, CN with bg+border, keywords tag."""
