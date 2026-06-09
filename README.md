@@ -22,11 +22,16 @@
 
 ```
 japanese-exam-review-skill/
-├── japanese-exam-review.md   ← Skill 定义文件（触发条件、工作流、内容规范、视觉规范）
+├── japanese-exam-review.md      ← Skill 定义（触发条件、工作流、JSON规范、视觉规范）
 ├── scripts/
-│   ├── parse_ppt.py          ← PPTX → 文本 + 图片 → JSON
-│   ├── parse_pdf.py          ← PDF 试卷 → 文本 → JSON
-│   └── generate_pdf.py       ← 内容 JSON → PDF（双视觉预设）
+│   ├── parse_ppt.py             ← PPTX 课件 → JSON
+│   ├── parse_pdf_lecture.py     ← PDF 讲义 → JSON（自动选格式）
+│   ├── parse_pdf.py             ← PDF 试卷 → JSON
+│   ├── generate_pdf.py          ← 内容 JSON → PDF（双视觉预设）
+│   └── check_coverage.py        ← 覆盖率检查（parsed vs content）
+├── examples/
+│   ├── content_example.json     ← 示例输入
+│   └── output_example_jp.pdf    ← 示例输出
 ├── assets/
 ├── requirements.txt
 └── README.md
@@ -71,7 +76,7 @@ mkdir exams    # 放入历年试卷 .pdf（可选）
 > 日本老师的数据库课件和历年试卷，帮我做考点分析
 ```
 
-Skill 会强制执行三问确认（模式 → 语言 → 其他需求），然后自动解析、生成、核查、输出 PDF 到 `output/` 目录。
+Skill 会强制执行三问确认（模式 → 语言 → 其他需求）→ 自动解析 → 选图 → 生成内容 JSON → `check_coverage.py` 核查 → 输出 PDF 到 `output/` 目录。
 
 ## 生成的 PDF 内容块
 
