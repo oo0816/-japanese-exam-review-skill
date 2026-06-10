@@ -2,6 +2,7 @@
 Styling based on the SE study guide design system.
 """
 import json
+import re
 import sys
 from pathlib import Path
 from fpdf import FPDF
@@ -49,6 +50,7 @@ STYLES = {
         "C_TITLE":       (0x1a, 0x3a, 0x5c),
         "C_SECTION":     (0x28, 0x3c, 0x5a),
         "C_BODY":        (0x32, 0x32, 0x32),  # SE guide original body color
+        "C_ANNOTATION":  (0x1a, 0x6e, 0x5c),  # teal-green for (English / 日本語) annotations
         "C_KEYPOINT":    (0x28, 0x32, 0x46),
         "C_EXAM":        (0xc8, 0x32, 0x32),
         "C_CAPTION":     (0x50, 0x50, 0x50),
@@ -106,50 +108,102 @@ class ReviewPDF(FPDF):
         return self.s[f"LH_{name}"]
 
     def _register_fonts(self):
-        """Register CJK fonts. Use NotoSansSC for full CJK coverage.
-        Note: SimSun lacks Japanese glyphs (〜・ etc), so NotoSansSC is preferred
-        despite SE guide using SimSun. Colors/spacing match the SE guide.
+        """Register CJK fonts: SimSun for Chinese body, NotoSansSC for Japanese terms.
+        SimSun (宋体) gives the academic serif look; NotoSansSC covers JP kana fully.
         """
         font_dir = Path("fonts")
 
-        regular = None
+        # --- Chinese serif font (SimSun) ---
+        cn_regular = font_dir / "simsun.ttc"
+        cn_bold = font_dir / "simsunb.ttf"
+
+        if cn_regular.exists():
+            self.add_font("CN", fname=str(cn_regular))
+            if cn_bold.exists():
+                self.add_font("CN", style="B", fname=str(cn_bold))
+            else:
+                self.add_font("CN", style="B", fname=str(cn_regular))
+        else:
+            # Fallback to NotoSansSC
+            cn_regular = None
+
+        # --- Japanese sans-serif font (NotoSansSC) ---
+        jp_regular = None
         for c in [font_dir / "NotoSansSC-Regular.ttf", font_dir / "NotoSansJP-Regular.ttf"]:
             if c.exists():
-                regular = c
+                jp_regular = c
                 break
 
-        bold = None
+        jp_bold = None
         for c in [font_dir / "NotoSansSC-Bold.ttf", font_dir / "NotoSansJP-Bold.ttf"]:
             if c.exists():
-                bold = c
+                jp_bold = c
                 break
 
-        if regular:
-            self.add_font("CJK", fname=str(regular))
-            self.font_reg = "CJK"
-        else:
-            self.font_reg = "Helvetica"
+        if jp_regular:
+            self.add_font("JP", fname=str(jp_regular))
+            if jp_bold:
+                self.add_font("JP", style="B", fname=str(jp_bold))
+            else:
+                self.add_font("JP", style="B", fname=str(jp_regular))
 
-        if bold:
-            self.add_font("CJK", style="B", fname=str(bold))
+        # Set default font
+        self.font_cn = "CN" if cn_regular and cn_regular.exists() else ("JP" if jp_regular else "Helvetica")
+        self.font_jp = "JP" if jp_regular else "Helvetica"
+
+    def _use_cn(self, bold=False):
+        """Switch to Chinese serif font (SimSun)."""
+        self.set_font(self.font_cn, "B" if bold else "")
+
+    def _use_jp(self, bold=False):
+        """Switch to Japanese font (NotoSansSC)."""
+        self.set_font(self.font_jp, "B" if bold else "")
 
     # ---------- helpers ----------
     def _w(self):
         return self.w - 2 * self.l_margin
 
     def _set_font(self, style="", size=None):
+        """Set primary font: CN (SimSun) for chinese_annotated, JP (NotoSansSC) for jp_first."""
         if size is None:
             size = self._fs("BODY")
-        if self.font_reg:
-            self.set_font(self.font_reg, style, size)
+        if self.language == "chinese_annotated":
+            self.set_font(self.font_cn, style, size)
+        else:
+            self.set_font(self.font_jp, style, size)
+
+    def _set_font_jp(self, style="", size=None):
+        """Set JP font (NotoSansSC) — for kana-rich Japanese text in any mode."""
+        if size is None:
+            size = self._fs("BODY")
+        self.set_font(self.font_jp, style, size)
 
     def _set_color(self, rgb):
         self.set_text_color(*rgb)
+
+    def _fix_simsun(self, text):
+        """Replace characters missing from SimSun (U+30FB ・→·)"""
+        if self.language == "chinese_annotated":
+            return text.replace('・', '·')
+        return text
+
+    def multi_cell(self, w=None, h=None, text="", border=0, align="L", fill=False, **kwargs):
+        """Override multi_cell to fix SimSun-incompatible chars."""
+        super().multi_cell(w, h, self._fix_simsun(text), border, align, fill, **kwargs)
+
+    def write(self, h=None, text="", link="", **kwargs):
+        """Override write to fix SimSun-incompatible chars."""
+        super().write(h, self._fix_simsun(text), link, **kwargs)
+
+    def cell(self, w=None, h=None, text="", border=0, ln=0, align="", fill=False, **kwargs):
+        """Override cell to fix SimSun-incompatible chars."""
+        super().cell(w, h, self._fix_simsun(text), border, ln, align, fill, **kwargs)
 
     def _paragraph(self, text, size=None, color=None, lh=None, keywords=None):
         """Render paragraph. If keywords list provided, bold those terms inline."""
         if size is None:
             size = self._fs("BODY")
+        text = self._fix_simsun(text)
         if color:
             self._set_color(color)
         h = lh if lh else self._lh("BODY")
@@ -174,6 +228,82 @@ class ReviewPDF(FPDF):
         self._set_font("", size)
         self._set_color(self._c("BODY"))
         self.multi_cell(self._w(), lh, text, align="L")
+
+    def _annotated_paragraph(self, text, size=None, lh=None):
+        """Render body text with colored (English / 日本語) annotations inline.
+        Uses write() for inline color switching on annotation patterns."""
+        import re
+        if size is None:
+            size = self._fs("BODY")
+        h = lh if lh else self._lh("BODY")
+
+        # Split text at （English / 日本語） patterns
+        # Pattern: full-width parens containing chars + / + chars
+        pattern = r'(（[^）]*?/[^）]*?）)'
+        parts = re.split(pattern, text)
+
+        self._set_font("", size)
+        x_start = self.get_x()
+        for part in parts:
+            if not part:
+                continue
+            # Check if this part is an annotation
+            if re.match(r'^（[^）]*?/[^）]*?）$', part):
+                self._set_color(self._c("ANNOTATION"))
+            else:
+                self._set_color(self._c("BODY"))
+            self.write(h, part)
+
+    def _annotated_multi_cell(self, text, size=None, lh=None):
+        """Render body text with annotations colored, using multi_cell for line wrapping.
+        Handles long paragraphs that need to wrap across lines."""
+        if size is None:
+            size = self._fs("BODY")
+        h = lh if lh else self._lh("BODY")
+
+        text = self._fix_simsun(text)
+
+        pattern = r'(（[^）]*?/[^）]*?）)'
+        segments = re.split(pattern, text)
+
+        self._set_font("", size)
+
+        # Build the line word-by-word, switching colors for annotation segments
+        w = self._w()
+        line = ""
+        for seg in segments:
+            if not seg:
+                continue
+            is_anno = bool(re.match(r'^（[^）]*?/[^）]*?）$', seg))
+
+            # Try to fit segment on current line
+            test_line = line + seg
+            if self.get_string_width(test_line) > w and line:
+                # Flush current line
+                self._set_color(self._c("BODY"))
+                # Render line with mixed segments
+                self._render_mixed_line(line, h, pattern)
+                line = seg
+            else:
+                line = test_line
+
+        # Flush remaining
+        if line:
+            self._render_mixed_line(line, h, pattern)
+        self.ln(h)
+
+    def _render_mixed_line(self, line, h, pattern):
+        """Render a single line with mixed body/annotation colors."""
+        segments = re.split(pattern, line)
+        for seg in segments:
+            if not seg:
+                continue
+            if re.match(r'^（[^）]*?/[^）]*?）$', seg):
+                self._set_color(self._c("ANNOTATION"))
+            else:
+                self._set_color(self._c("BODY"))
+            self.write(h, seg)
+        self.ln(h)
 
     def _bold_paragraph(self, text, size=None, color=None, lh=None):
         if size is None:
@@ -249,8 +379,8 @@ class ReviewPDF(FPDF):
 
         border_color = self._c("TABLE_BORDER")
 
-        # Header row — dark navy bg, white bold text
-        self._set_font("B", self._fs("TABLE_HDR"))
+        # Header row — dark navy bg, white bold text (JP font for kana-rich headers)
+        self._set_font_jp("B", self._fs("TABLE_HDR"))
         self._set_color(self._c("TABLE_HDR"))
         self.set_fill_color(*self._c("TABLE_BG"))
         self.set_draw_color(*border_color)
@@ -258,8 +388,8 @@ class ReviewPDF(FPDF):
             self.cell(col_widths[i], 6, " " + col, border=1, fill=True, align="C")
         self.ln()
 
-        # Data rows with visible borders and alternating colors
-        self._set_font("", self._fs("TABLE_BODY"))
+        # Data rows — JP font for kana-rich Japanese terms
+        self._set_font_jp("", self._fs("TABLE_BODY"))
         alt = False
         for row in rows:
             if alt:
@@ -338,7 +468,10 @@ class ReviewPDF(FPDF):
                 cn = cn_paras[i].strip()
 
                 if jp:
-                    self._paragraph(jp, self._fs("BODY"), self._c("BODY"))
+                    if self.language == "chinese_annotated":
+                        self._annotated_multi_cell(jp, self._fs("BODY"), self._lh("BODY"))
+                    else:
+                        self._paragraph(jp, self._fs("BODY"), self._c("BODY"))
 
                 if cn:
                     if jp:
@@ -481,7 +614,10 @@ def generate_pdf(content_json_path, output_path, language="bilingual"):
             for i, part in enumerate(parts):
                 pdf.set_x(pdf.l_margin)  # force reset x before each paragraph
                 if i == 0 and part.strip():
-                    pdf._paragraph(part.strip(), pdf._fs("BODY"), pdf._c("OVERVIEW_JP"))
+                    # JP overview: use JP font for kana safety
+                    pdf._set_font_jp("", pdf._fs("BODY"))
+                    pdf._set_color(pdf._c("OVERVIEW_JP"))
+                    pdf.multi_cell(pdf._w(), pdf._lh("BODY"), pdf._fix_simsun(part.strip()), align="L")
                 elif part.strip():
                     pdf._paragraph(part.strip(), pdf._fs("NOTE"), pdf._c("OVERVIEW_CN"))
             pdf.ln(2)
