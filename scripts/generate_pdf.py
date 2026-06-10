@@ -182,9 +182,12 @@ class ReviewPDF(FPDF):
         self.set_text_color(*rgb)
 
     def _fix_simsun(self, text):
-        """Replace characters missing from SimSun (U+30FB ・→·)"""
+        """Replace characters missing from SimSun."""
         if self.language == "chinese_annotated":
-            return text.replace('・', '·')
+            text = text.replace('・', '·')
+            text = text.replace('〜', '~')
+            text = text.replace('⇔', '<->')
+            text = text.replace('⑪', '(11)')
         return text
 
     def multi_cell(self, w=None, h=None, text="", border=0, align="L", fill=False, **kwargs):
