@@ -293,7 +293,7 @@ python scripts/generate_pdf.py output/content_mode1.json -o output/review.pdf -l
 ## 内容质量要求
 
 1. **术语准确**：日语术语与课件原文一致，中文译名使用大陆 CS 标准译名
-2. **英日双语标注**（chinese_annotated 强制）：正文中每个关键术语首次出现时必须同时标注英文和日文，格式为「中文（English / 日本語）」。英文在前、日文在后，两项缺一不可。例：「广域网（Wide Area Network / WAN）」「传输控制协议（Transmission Control Protocol / TCP）」。术语表（term_table）也须包含日文·读法·中文·英文四列
+2. **英日双语标注**（chinese_annotated 强制）：正文中每个关键术语首次出现时必须同时标注英文和日文，格式为 `（English / 日本語）`。英文在前、日文在后，两项缺一不可。**禁止**仅标注英文不标注日文、或仅标注中文不标注日文。标注在 PDF 中以翠绿色 `#1a7a5c` 渲染。术语表第3列标题为「中国語（English）」，第4列説明必须包含日文原文
 3. **保留日语原表述**：关键定义保留日语原文，确保学生能对应考试中的日语表述
 4. **翻译完整**（jp_first）：translation 是对 content 的完整逐段翻译，不是术语对照或摘要
 5. **图片精选**：有重点图才放，无重点图的章节不强制。每章最多 2-3 张
@@ -313,5 +313,11 @@ python scripts/generate_pdf.py output/content_mode1.json -o output/review.pdf -l
 - 解析脚本覆盖 `output/parsed_ppt.json` 和 `output/parsed_exams.json`
 - PDF 讲义同样适用（用 PyMuPDF 提取，非 PPTX 时跳过 parse_ppt.py）
 - 图片保存到 `output/images/`，生成 PDF 前确认图片存在
-- 生成 PDF 前确认 `fonts/NotoSansSC-Regular.ttf` 和 `fonts/NotoSansSC-Bold.ttf` 存在
+- **字体要求**：
+  - `fonts/simsun.ttc` — 中文衬线字体（从 Windows 系统字体目录 `C:\Windows\Fonts\simsun.ttc` 复制）
+  - `fonts/simsunb.ttf` — SimSun 粗体（可选，无则用 regular 替代）
+  - `fonts/NotoSansSC-Regular.ttf` 和 `fonts/NotoSansSC-Bold.ttf` — 日文无衬线字体
+  - SimSun 缺 `・``〜``⇔``⑪` 等字符，`generate_pdf.py` 的 `_fix_simsun()` 会自动替换
+- **标注格式强制**（chinese_annotated 模式）：所有内容 JSON 中的概念卡正文，每个关键术语首次出现必须用 `（English / 日本語）` 标注。脚本 `fix_all_annos.py` 可用于批量修正漏标注的情况
+- **术语表説明列**：必须包含日文原文说明 + 中文翻译，格式为 `日文説明（中文翻译）`
 - 模式二若 `exams/` 无试卷文件，自动降级为模式一
