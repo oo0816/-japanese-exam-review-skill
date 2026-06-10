@@ -256,27 +256,26 @@ python scripts/generate_pdf.py output/content_mode1.json -o output/review.pdf -l
 | 表格边框 | `#d0d5e0` | 有 |
 | 卡片间距 | 4pt | — |
 
-### chinese_annotated（SE 指南原版 + 宋体中文 + 标注着色）
+### chinese_annotated（中文为主 + 术语加粗 + 注解换字体）
 
 | 元素 | 色值 | 字号/样式 | 字体 |
 |------|------|-----------|------|
-| 章节标题 | `#1a3a5c` | 17pt 加粗 | SimSun（宋体） |
-| 小节标题 | `#283c5a` | 12pt 加粗 | SimSun（宋体） |
+| 章节标题 | `#1a3a5c` | 17pt 加粗 | NotoSansSC Bold |
+| 小节标题 | `#283c5a` | 12pt 加粗 | NotoSansSC Bold |
 | 中文正文 | `#323232` | 8.5pt | SimSun（宋体） |
-| 术语标注 `（English / 日本語）` | `#1a7a5c` | 8.5pt | SimSun（宋体） |
-| 关键词标注 | 行内（English / 日本語）格式 | 8.5pt | — |
-| Keywords 标签 | `#283246` | 7pt 加粗 | NotoSansSC |
-| 考试提示 | `#c83232` | 8.5pt | SimSun（宋体） |
+| **术语（首次出现）** | `#323232` | **8.5pt 加粗** | SimSun |
+| 注解 `（English / 日本語）` | `#323232` | 8.5pt | NotoSansSC（换字体区分） |
+| Keywords 标签 | `#283246` | 7pt 加粗 | NotoSansSC Bold |
+| 考试提示 | `#c83232` | 8.5pt | SimSun |
 | 图注 | `#505050` | 8pt | NotoSansSC |
-| 注释/概述中文 | `#646464` | 7pt | SimSun（宋体） |
+| 注释/概述中文 | `#646464` | 7pt | SimSun |
 | 概述日文 | `#323232` | 8.5pt | NotoSansSC |
-| 表格表头 | `#ffffff` / `#283c5a` 底 | 7.5pt 加粗 | NotoSansSC |
+| 表格表头 | `#ffffff` / `#283c5a` 底 | 7.5pt 加粗 | NotoSansSC Bold |
 | 表格正文 | `#282828` | 7pt | NotoSansSC |
-| 表格交替行 | `#f8f8fc` / `#ffffff`（微妙） | — | — |
-| 表格边框 | 无 | — | — |
-| 卡片间距 | 2pt | — | — |
+| 表格交替行 | `#f8f8fc` / `#ffffff` | — | — |
+| 卡片间距 | 5pt（段落间） | — | — |
 
-> **字体规则**：中文正文、标题使用 SimSun（宋体，衬线/学术风格）；日文术语、表格、概述日文部分使用 NotoSansSC（无衬线/黑体，完整覆盖假名）。SimSun 不支持日文中点 `・`（U+30FB），渲染时自动替换为 `·`（U+00B7）。
+> **实现**：PDF 引擎 reportlab 4.5+。术语用 `<b>` 加粗，注解用 `<font name="NS">` 切换 NotoSansSC。需补 `_ps2tt_map` 否则 `<b>` 和 `<font name>` 报错。`<font color>` 在 Paragraph 中不生效（reportlab 已知限制）。`make_cn_json.py` 从 `content_mode1_v3.json` 的 `translation` 字段生成中文内容。
 
 ### 共用参数
 
@@ -314,10 +313,9 @@ python scripts/generate_pdf.py output/content_mode1.json -o output/review.pdf -l
 - PDF 讲义同样适用（用 PyMuPDF 提取，非 PPTX 时跳过 parse_ppt.py）
 - 图片保存到 `output/images/`，生成 PDF 前确认图片存在
 - **字体要求**：
-  - `fonts/simsun.ttc` — 中文衬线字体（从 Windows 系统字体目录 `C:\Windows\Fonts\simsun.ttc` 复制）
-  - `fonts/simsunb.ttf` — SimSun 粗体（可选，无则用 regular 替代）
-  - `fonts/NotoSansSC-Regular.ttf` 和 `fonts/NotoSansSC-Bold.ttf` — 日文无衬线字体
-  - SimSun 缺 `・``〜``⇔``⑪` 等字符，`generate_pdf.py` 的 `_fix_simsun()` 会自动替换
+  - `fonts/simsun.ttc` — 中文衬线字体（从 Windows 系统字体目录 `C:\Windows\Fonts\simsun.ttc` 复制，运行时自动提取为 .ttf）
+  - `fonts/NotoSansSC-Regular.ttf` 和 `fonts/NotoSansSC-Bold.ttf` — 日文/中文无衬线字体
+  - 粗体通过独立的 Bold 字体文件实现，不使用 HTML `<b>` 标签（reportlab 限制）
 - **标注格式强制**（chinese_annotated 模式）：所有内容 JSON 中的概念卡正文，每个关键术语首次出现必须用 `（English / 日本語）` 标注。脚本 `fix_all_annos.py` 可用于批量修正漏标注的情况
 - **术语表説明列**：必须包含日文原文说明 + 中文翻译，格式为 `日文説明（中文翻译）`
 - 模式二若 `exams/` 无试卷文件，自动降级为模式一
