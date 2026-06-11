@@ -254,15 +254,35 @@ class ReviewPDFBuilder:
         return Paragraph(text, style)
 
     def _fix_text(self, text):
-        """Replace SimSun-incompatible chars."""
+        """Replace SimSun-incompatible chars and enforce \n\n paragraph breaks."""
+        if not text:
+            return text
         if self.language == "chinese_annotated":
             text = text.replace('・', '·')
             text = text.replace('〜', '~')
             text = text.replace('⇔', '<->')
             text = text.replace('⑪', '(11)')
-        return text
+        # Enforce \n\n: reportlab treats single \n as space, not line break.
+        # Convert all single \n to \n\n, then collapse 3+ newlines.
+        import re
+        text = re.sub(r'(?<!\n)\n(?!\n)', '\n\n', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
+    def _sanitize_document(self, document):
+        """Pre-process all text fields to fix common formatting issues."""
+        for section in document.get("sections", []):
+            for key in ("overview",):
+                if section.get(key):
+                    section[key] = self._fix_text(section[key])
+            for block in section.get("blocks", []):
+                for key in ("content", "translation", "key_point", "exam_tip", "example", "label"):
+                    if block.get(key):
+                        block[key] = self._fix_text(block[key])
 
     def build(self, document, output_path):
+        """Build the complete PDF document."""
+        self._sanitize_document(document)
         """Build the complete PDF document."""
         doc = SimpleDocTemplate(
             str(output_path), pagesize=A4,
