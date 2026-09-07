@@ -1,110 +1,92 @@
-# 日语CS专业课复习文档生成器
+# 日语CS专业课复习文档生成器 (japanese-exam-review)
 
-[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-6C4DF6)](https://claude.ai/code)
+[![Agent Skills Standard](https://img.shields.io/badge/Agent%20Skills-Standard-6C4DF6)](https://skills.sh)
+[![Multi-Runtime](https://img.shields.io/badge/Multi-Runtime-ready-3EA639)](https://skills.sh)
 
-软件工程中日合作办学项目专用。根据**日语授课的 CS 专业课课件**和**历年试卷**，自动生成结构化复习文档 PDF。支持 PDF 讲义和 PPTX 两种源文件格式。
+根据**日语授课的 CS 专业课课件**（PDF 讲义 / PPTX）和**历年试卷**，生成中日对照的复习文档 PDF。支持 PDF 讲义和 PPTX 两种源文件。
+
+**核心：全 Skill 只有一套统一版式（`scripts/guide_style.py`），两条制作通路产出完全一致。**
+
+- **通路 A — 直写**：现写 `build_*.py` 按阅读顺序调用引擎方法（自由，适合单份/小课件）。
+- **通路 B — JSON**：写一份极简内容 JSON，由 `scripts/path_b_render.py` 渲染（适合大课件/批量/覆盖率迭代）。
+
+## 统一版式（一个原则）
+
+引擎只提供屈指可数的几个版式元件（见 `SKILL.md`），单字体 SimSun、三组配色（藏青=标题/关键句、红=考点+图注专用、灰=次要）。**红色只给【試験】考点和 ▲图注。** 复习文档、考点解析、附录索引一律用它，不许另起风格。
+
+风格样张（已逐页核对一致）：
+
+- `output/sample_a.pdf` ← 直写版（`scripts/build_sample_a.py`）
+- `output/sample_b.pdf` ← JSON 版（`examples/content_b_example.json`）
 
 ## 适用场景
 
-用日语学习 CS 专业课（计算机网络、数据库、操作系统、数据结构等），考试在即：
-
-- **模式一**：课件 → 复习文档（术语表 + 知识点卡片 + 对比表格 + 精选图片）
-- **模式二**：课件 + 历年试卷 → 考点分析 + 高频考点精讲 + 未考重点预警
-
-## 输出语言
-
-| 模式 | 说明 | 示例效果 |
-|------|------|----------|
-| `jp_first`（推荐） | 日语原文在上，中文完整翻译在下（蓝底区分），关键词标签，对比表格，精选图片 | 适合对照日语原文备考 |
-| `chinese_annotated` | 中文主述，关键术语用 English / 日本語 行内标注，对比表格 | 适合快速理解知识点 |
+- 仅课件 → 复习文档（术语表 + 概念正文 + 对比表 + 精选原图 + 红字考点）
+- 课件 + 试卷 → **考点复习（考点模式）**：试卷不挑格式与来源——`exams/` 的 PDF、同学分享的照片 / 回忆题均可；先抽考点库，再以考点为主线排文档（真实红字 ★、附用語索引 / 試験対策）
 
 ## 项目结构
 
 ```
-japanese-exam-review-skill/
-├── japanese-exam-review.md      ← Skill 定义（触发条件、工作流、JSON规范、视觉规范）
+japanese-exam-review/
+├── SKILL.md                    ← Skill 定义：触发/统一版式/写作规范/两通路/JSON schema
+├── README.md
 ├── scripts/
-│   ├── parse_ppt.py             ← PPTX 课件 → JSON
-│   ├── parse_pdf_lecture.py     ← PDF 讲义 → JSON（自动选格式）
-│   ├── parse_pdf.py             ← PDF 试卷 → JSON
-│   ├── generate_pdf.py          ← 内容 JSON → PDF（双视觉预设）
-│   └── check_coverage.py        ← 覆盖率检查（parsed vs content）
+│   ├── parse_pdf_lecture.py    ← PDF 讲义 → output/parsed_ppt.json + images
+│   ├── parse_ppt.py            ← PPTX 课件 → 同上
+│   ├── parse_pdf.py            ← PDF 试卷 → 考点原始数据
+│   ├── guide_style.py          ← ★ 排版引擎（统一版式唯一来源）
+│   ├── path_b_render.py        ← 通路B：内容 JSON → PDF（复用引擎）
+│   ├── build_sample_a.py       ← 通路A 示例（直写）
+│   └── check_coverage.py       ← 覆盖率检查（parsed vs content JSON）
 ├── examples/
-│   ├── content_example.json     ← 示例输入
-│   └── output_example_jp.pdf    ← 示例输出
-├── assets/
-├── requirements.txt
-└── README.md
+│   ├── content_b_example.json  ← 通路B 完整示例输入
+│   └── README.md
+├── fonts/                      ← simsun（引擎自动：extracted.ttf → simsun.ttc 回退）
+├── ppt/                        ← 放课件（.pdf / .pptx，.pptx 不入库）
+├── exams/                      ← 放历年试卷（可选，不入库）
+└── requirements.txt
 ```
 
 ## 安装
 
-### 1. 克隆到 Claude Code skills 目录
-
 ```bash
-mkdir -p .claude/skills
-git clone https://github.com/oo0816/-japanese-exam-review-skill.git .claude/skills/japanese-exam-review
-```
+# 1. 放进本机/项目的 skills 目录（个人版 `~/.claude/skills`、项目版 `.claude/skills`；或在 skills 工程内直接使用）
+git clone <repo> .claude/skills/japanese-exam-review
 
-### 2. 安装 Python 依赖
+# 2. 依赖
+pip install -r requirements.txt
 
-```bash
-pip install -r .claude/skills/japanese-exam-review/requirements.txt
-```
+# 3. 字体 fonts/simsun（Windows 系统字体，未入库）
+#    复制 C:\Windows\Fonts\simsun.ttc 到 fonts/，引擎可自动提取 .ttf
 
-### 3. 下载 CJK 字体
-
-```powershell
-mkdir fonts
-Invoke-WebRequest -Uri "https://fonts.gstatic.com/s/notosanssc/v40/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYw.ttf" -OutFile "fonts\NotoSansSC-Regular.ttf"
-Invoke-WebRequest -Uri "https://fonts.gstatic.com/s/notosanssc/v40/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaGzjCnYw.ttf" -OutFile "fonts\NotoSansSC-Bold.ttf"
-```
-
-### 4. 准备目录
-
-```bash
-mkdir ppt      # 放入课件（.pptx 或 .pdf）
-mkdir exams    # 放入历年试卷 .pdf（可选）
+# 4. 目录
+mkdir ppt exams
 ```
 
 ## 使用
 
-在 Claude Code 中输入包含**日语相关 + CS 专业课**两个关键词的请求：
+对支持 agent skills 的 AI 助手（Claude Code / Codex / Cursor 等）输入**日语相关 + CS 专业课**的请求：
 
 ```
 > 帮我把日语的计算机网络PPT整理成复习文档
-> 日本老师的数据库课件和历年试卷，帮我做考点分析
+> 日本老师的数据库课件和历年试卷，帮我做考点复习
 ```
 
-Skill 会强制执行三问确认（模式 → 语言 → 其他需求）→ 自动解析 → 选图 → 生成内容 JSON → `check_coverage.py` 核查 → 输出 PDF 到 `output/` 目录。
+Skill 确认范围与通路 → 解析课件 →（可选）解析试卷/建考点清单 → 通路 A 直写或通路 B JSON →（B）覆盖率核查 → 目验 PDF。
 
-## 生成的 PDF 内容块
+## 内容块（就这 5 种，B JSON 与 A 方法一一对应）
 
-| 类型 | 用途 |
-|------|------|
-| `term_table` | 专业术语对照表（日本語 → 読み方 → 中国語 → 説明） / 对比表格（日中双语） |
-| `concept_card` | 知识点卡片：标题 + 关键词标签 + 日语正文 + 中文蓝底翻译（交错排列）+ 考试提示 |
-| `highlight_box` | 重点提醒 / 考试要点 |
-| `image` | 精选架构图、流程图 + 双语图注 |
-| `exam_stat` | 考试统计（题型分布、分值占比） |
-
-## 视觉规范
-
-两套预设，通过 `-l` 参数切换：
-
-- **jp_first**：高对比正文 `#222`、翻译蓝底 `#edf2f8`、表格有边框、卡片间距 4pt
-- **chinese_annotated**：SE 指南原版 `#323232` 正文、表格无边框、卡片间距 2pt
-
-共用：16mm/17mm 边距、8.5pt/7pt 字号体系、NotoSansSC 字体
+| 块 | 用途 |
+|----|------|
+| `para` (cn/jp/note) | 中文正文 / 日文关键句【中】 / 灰色次要说明 |
+| `heading` | 章内小节标题 |
+| `table` | 术语对照表 / 概念对比表（单元格 `日文\n【中】中文`） |
+| `figure` | 讲义原图 + 红▲图注 + 灰细说明 |
+| `exam` | 考点红字（自动加【試験】前缀） |
 
 ## 依赖
 
-- Python >= 3.10
-- python-pptx
-- PyMuPDF
-- fpdf2
-- Pillow
+- Python ≥ 3.10
+- PyMuPDF（解析）、fpdf2（排版）、python-pptx（PPTX）、Pillow
 
-## License
-
-MIT
+> reportlab 已退役移除。旧引擎 `generate_pdf.py` 不再存在。

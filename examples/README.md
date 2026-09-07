@@ -1,22 +1,19 @@
 # Examples
 
-## Input: Content JSON
+## B 通路示例输入
 
-`content_example.json` — 计算机网络第1章的完整内容 JSON（jp_first 格式）。
+`content_b_example.json` — 通路 B（内容 JSON）的完整示例：计算机网络第 02 回复习文档，含封面 / 目次 / 两章（回線交換 vs パケット交換 + Kleinrock）/ 讲义原图 / 术语表 / 红字考点。
 
-包含的块类型：
-- `term_table`：专业术语表（日本語 → 読み方 → 中国語 → 説明）
-- `concept_card`：知识点卡片（含 title / content / translation / keywords / importance）
-- `image`：图片块
-- `highlight_box`：考试重点提示
+再生成 PDF（写入 `output/`）：
 
-完整规范见 `japanese-exam-review.md` → 内容 JSON 规范。
-
-## Output: Generated PDF
-
-`output_example_jp.pdf` — 由 `content_example.json` 生成的 PDF（jp_first 模式）。
-
-生成命令：
 ```bash
-python scripts/generate_pdf.py examples/content_example.json -o examples/output_example_jp.pdf -l jp_first
+python scripts/path_b_render.py examples/content_b_example.json -o output/sample_b.pdf
 ```
+
+## A 通路示例脚本
+
+`../scripts/build_sample_a.py` — 同一内容的**直写版**（通路 A），直接调用 `guide_style` 排版。
+
+`output/sample_a.pdf` 与 `output/sample_b.pdf` 已逐页核对完全一致——证明两条通路共用同一套版式。
+
+> 新产出应以这两个样张为"同味"基准；版式元件与纪律见 `../SKILL.md` → 统一版式。

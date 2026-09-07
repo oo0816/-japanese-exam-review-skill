@@ -9,6 +9,7 @@ fonts/
 
 # User data
 ppt/*.pptx
+ppt/*.pdf
 exams/*.pdf
 
 # OS
